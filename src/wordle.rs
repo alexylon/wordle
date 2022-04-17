@@ -91,7 +91,7 @@ impl WordleGame {
                 Err(e) => { eprintln!("Error: {}", e); }
             }
             guess = sanitize_word(&guess);
-            println!("{}", guess);
+            // println!("{}", guess);
             if guess.chars().count() != WORD_LENGTH {
                 println!("{}", format!("Your guess must be {} letters.", WORD_LENGTH).red())
             } else if !self.dictionary.iter().any(|word| word == &guess) {
@@ -107,7 +107,7 @@ impl WordleGame {
     pub(crate) fn is_game_over(&mut self, guess: &str) -> bool {
         let n_tries = self.guesses.len();
         if guess == self.word {
-            println!("{}", format!("Correct! You guessed the word in {} tries.", n_tries).bright_green());
+            println!("{}", format!("Correct! You guessed the word {} in {} tries.", self.word.truecolor(0, 170, 120).bold(), n_tries).bright_green());
             true
         } else if n_tries >= MAX_TRIES {
             self.display_guesses();
