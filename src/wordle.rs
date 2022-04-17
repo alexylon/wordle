@@ -2,7 +2,7 @@ use colored::*;
 use bracket_random::prelude::RandomNumberGenerator;
 use std::collections::HashSet;
 
-const ALL_WORDS: &str = include_str!("resources/words_en.txt");
+const ALL_WORDS: &str = include_str!("resources/words_bg_short.txt");
 const WORD_LENGTH: usize = 5;
 const MAX_TRIES: usize = 6;
 
@@ -23,6 +23,7 @@ fn words_list() -> Vec<String> {
         .collect()
 }
 
+#[derive(Clone)]
 pub struct WordleGame {
     dictionary: Vec<String>,
     pub(crate) word: String,
@@ -51,12 +52,12 @@ impl WordleGame {
             print!("{}: ", guess_number + 1);
             guess.chars().enumerate().for_each(|(pos, c)| {
                 let display = if self.word.chars().nth(pos).unwrap() == c {
-                    format!("{}", c).green()
+                    format!("{}", c).truecolor(0, 170, 120).bold()
                 } else if self.word.chars().any(|wc| wc == c) {
-                    format!("{}", c).bright_yellow()
+                    format!("{}", c).bright_yellow().bold()
                 } else {
                     self.guessed_letters.insert(c);
-                    format!("{}", c).red()
+                    format!("{}", c).bold().truecolor(210, 0, 0)
                 };
                 print!("{}", display);
             });
@@ -65,10 +66,12 @@ impl WordleGame {
     }
 
     fn display_invalid_letters(&self) {
-        if !self.guessed_letters.is_empty() {
+        let mut letters: Vec<char> = self.guessed_letters.clone().into_iter().collect();
+        if !letters.is_empty() {
             print!("Letters not in the word: ");
-            self.guessed_letters.iter()
-                .for_each(|letter| print!("{} ", letter));
+            letters.sort();
+            letters.iter()
+                .for_each(|letter| print!("{} ", format!("{}", letter).bold()));
             println!();
         }
     }
@@ -83,7 +86,10 @@ impl WordleGame {
         let mut valid_guess = false;
         while !valid_guess {
             guess = String::new();
-            std::io::stdin().read_line(&mut guess).unwrap();
+            match std::io::stdin().read_line(&mut guess) {
+                Ok(_) => {}
+                Err(e) => { eprintln!("Error: {}", e); }
+            }
             guess = sanitize_word(&guess);
             println!("{}", guess);
             if guess.chars().count() != WORD_LENGTH {
@@ -98,13 +104,14 @@ impl WordleGame {
         guess
     }
 
-    pub(crate) fn is_game_over(&self, guess: &str) -> bool {
+    pub(crate) fn is_game_over(&mut self, guess: &str) -> bool {
         let n_tries = self.guesses.len();
         if guess == self.word {
             println!("{}", format!("Correct! You guessed the word in {} tries.", n_tries).bright_green());
             true
         } else if n_tries >= MAX_TRIES {
-            println!("{}", format!("You ran out of tries! The word was {}", self.word).bright_red());
+            self.display_guesses();
+            println!("{}", format!("You ran out of tries! The word was {}", self.word.bold()).bright_red());
             true
         } else {
             false
