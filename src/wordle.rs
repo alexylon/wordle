@@ -2,7 +2,7 @@ use colored::*;
 use bracket_random::prelude::RandomNumberGenerator;
 use std::collections::HashSet;
 
-const ALL_WORDS: &str = include_str!("words_en.txt");
+const ALL_WORDS: &str = include_str!("resources/words_en.txt");
 const WORD_LENGTH: usize = 5;
 const MAX_TRIES: usize = 6;
 
