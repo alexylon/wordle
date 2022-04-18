@@ -2,16 +2,16 @@ use colored::*;
 use bracket_random::prelude::RandomNumberGenerator;
 use std::collections::HashSet;
 use fluent::{FluentBundle, FluentValue, FluentResource, FluentArgs, FluentMessage};
-use std::fs::File;
-use std::{fs, io};
-use std::io::prelude::*;
-use std::path::Path;
-use std::env;
+use std::{io};
 use fluent_langneg::{negotiate_languages, NegotiationStrategy};
 // Used to provide a locale for the bundle.
 use unic_langid::{langid, LanguageIdentifier};
+use include_dir::{include_dir, Dir};
 
+// include file to binaries
 const ALL_WORDS: &str = include_str!("resources/words_bg_short.txt");
+// Include dir to binaries
+static TRANSLATIONS_DIR: Dir = include_dir!("./src/translations");
 const WORD_LENGTH: usize = 5;
 const MAX_TRIES: usize = 6;
 
@@ -131,39 +131,22 @@ impl WordleGame {
     }
 }
 
-/// We need a generic file read helper function to read the localization resource file.
-fn read_file(path: &Path) -> Result<String, io::Error> {
-    let mut file = File::open(path)?;
-    let mut string = String::new();
-    file.read_to_string(&mut string)?;
-    Ok(string)
-}
-
 /// This helper function allows us to read the list of available locales
 ///
 /// It is expected that every directory inside it has a name that is a valid BCP47 language tag.
 fn get_available_locales() -> Result<Vec<LanguageIdentifier>, io::Error> {
     let mut locales = vec![];
-
-    let mut dir = env::current_dir()?;
-    dir.push("src/translations");
-    let res_dir = fs::read_dir(dir)?;
-    for entry in res_dir {
-        if let Ok(entry) = entry {
-            let path = entry.path();
-            if path.is_dir() {
-                if let Some(name) = path.file_name() {
-                    if let Some(name) = name.to_str() {
-                        if let Ok(langid) = name.parse() {
-                            locales.push(langid);
-                        } else {
-                            eprintln!("Parsing failed.");
-                        }
-                    }
-                }
+    let dirs = TRANSLATIONS_DIR.dirs();
+    for entry in dirs {
+        if let Some(name) = entry.path().to_str() {
+            if let Ok(langid) = name.parse() {
+                locales.push(langid);
+            } else {
+                eprintln!("Parsing failed.");
             }
         }
     }
+
     return Ok(locales);
 }
 
@@ -220,12 +203,12 @@ fn get_bundle(locale: &str) -> FluentBundle<FluentResource> {
 
     // Load the localization resource
     for path in L10N_RESOURCES {
-        let mut full_path = env::current_dir().expect("Failed to retrieve current dir.");
-        full_path.push("src/translations");
-        full_path.push(current_locale.to_string());
-        full_path.push(path);
-        let source = read_file(&full_path).expect("Failed to read file.");
-        let resource = FluentResource::try_new(source).expect("Could not parse an FTL string.");
+        let file = TRANSLATIONS_DIR.get_file(format!("{}/{}", current_locale, path)).unwrap().contents();
+        let source = match std::str::from_utf8(file) {
+            Ok(v) => v,
+            Err(e) => panic!("Invalid UTF-8 sequence: {}", e),
+        };
+        let resource = FluentResource::try_new(source.to_string()).expect("Could not parse an FTL string.");
         bundle
             .add_resource(resource)
             .expect("Failed to add FTL resources to the bundle.");

@@ -11,3 +11,4 @@ bracket-random = "0.8"
 fluent = "0.16"
 fluent-langneg = "0.13"
 unic-langid = { version = "0.9", features = ["macros"] }
+include_dir = "0.7"
