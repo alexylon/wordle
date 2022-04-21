@@ -36,7 +36,8 @@ fn words_list() -> Vec<String> {
 pub struct WordleGame {
     dictionary: Vec<String>,
     pub(crate) word: String,
-    guessed_letters: HashSet<char>,
+    invalid_letters: HashSet<char>,
+    valid_letters: HashSet<char>,
     guesses: Vec<String>,
 }
 
@@ -51,7 +52,8 @@ impl WordleGame {
         Self {
             dictionary,
             word: word.to_string(),
-            guessed_letters: HashSet::new(),
+            invalid_letters: HashSet::new(),
+            valid_letters: HashSet::new(),
             guesses: Vec::new(),
         }
     }
@@ -64,11 +66,13 @@ impl WordleGame {
                     None => { eprintln!("No char found!"); }
                     Some(character) => {
                         let display = if character == c {
+                            self.valid_letters.insert(c);
                             format!("{}", c).truecolor(0, 170, 120).bold()
                         } else if self.word.chars().any(|wc| wc == c) {
+                            self.valid_letters.insert(c);
                             format!("{}", c).bright_yellow().bold()
                         } else {
-                            self.guessed_letters.insert(c);
+                            self.invalid_letters.insert(c);
                             format!("{}", c).bold().truecolor(210, 0, 0)
                         };
                         print!("{}", display);
@@ -80,14 +84,34 @@ impl WordleGame {
     }
 
     fn display_invalid_letters(&self, locale: &str) {
-        let mut letters: Vec<char> = self.guessed_letters.clone().into_iter().collect();
-        if !letters.is_empty() {
+        let mut invalid_letters: Vec<char> = self.invalid_letters.clone().into_iter().collect();
+        if !invalid_letters.is_empty() {
             print!("{} ", get_message(&get_bundle(&locale), "invalid-letters-message"));
-            letters.sort();
-            letters.iter()
+            invalid_letters.sort();
+            invalid_letters.iter()
                 .for_each(|letter| print!("{} ", format!("{}", letter).bold()));
             println!();
         }
+    }
+
+    pub fn display_alphabet(&mut self, locale: &str) {
+        let alphabet = get_message(&get_bundle(&locale), "alphabet");
+        let valid_letters: Vec<char> = self.valid_letters.clone().into_iter().collect();
+        let invalid_letters: Vec<char> = self.invalid_letters.clone().into_iter().collect();
+
+        for c_alphabet in alphabet.chars() {
+            let display = if valid_letters.contains(&c_alphabet) {
+                format!("{} ", c_alphabet).green().bold()
+            } else if invalid_letters.contains(&c_alphabet) {
+                format!("{} ", c_alphabet).truecolor(210, 0, 0).bold()
+            } else {
+                format!("{} ", c_alphabet).bold()
+            };
+
+            print!("{}", display);
+        }
+
+        println!();
     }
 
     pub fn ask_for_guess(&mut self, locale: &str) -> String {
@@ -118,7 +142,7 @@ impl WordleGame {
         guess
     }
 
-    pub(crate) fn is_game_over(&mut self, guess: &str, locale: &str) -> bool {
+    pub(crate) fn game_is_over(&mut self, guess: &str, locale: &str) -> bool {
         let mut args = FluentArgs::new();
         let n_tries = self.guesses.len();
         args.set("word", FluentValue::from(self.word.clone()));
@@ -135,6 +159,8 @@ impl WordleGame {
         }
     }
 }
+
+// I18N
 
 /// This helper function allows us to read the list of available locales
 ///

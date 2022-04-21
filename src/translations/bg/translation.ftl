@@ -4,3 +4,4 @@ not-found-warning = {$guess} не е в речника.
 correct-message = Правилно! Отгатна думата {$word} от {$n_tries} опита.
 failed-message = Нямаш повече опити! Думата беше {$word}.
 invalid-letters-message = Букви, които не са в думата:
+alphabet = АБВГДЕЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЬЮЯ
