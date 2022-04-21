@@ -1,7 +1,7 @@
 use colored::*;
 use bracket_random::prelude::RandomNumberGenerator;
 use std::collections::HashSet;
-use fluent::{FluentBundle, FluentValue, FluentResource, FluentArgs, FluentMessage};
+use fluent::{FluentBundle, FluentValue, FluentResource, FluentArgs};
 use std::{io};
 use fluent_langneg::{negotiate_languages, NegotiationStrategy};
 // Used to provide a locale for the bundle.
@@ -60,15 +60,20 @@ impl WordleGame {
         self.guesses.iter().enumerate().for_each(|(guess_number, guess)| {
             print!("{}: ", guess_number + 1);
             guess.chars().enumerate().for_each(|(pos, c)| {
-                let display = if self.word.chars().nth(pos).unwrap() == c {
-                    format!("{}", c).truecolor(0, 170, 120).bold()
-                } else if self.word.chars().any(|wc| wc == c) {
-                    format!("{}", c).bright_yellow().bold()
-                } else {
-                    self.guessed_letters.insert(c);
-                    format!("{}", c).bold().truecolor(210, 0, 0)
-                };
-                print!("{}", display);
+                match self.word.chars().nth(pos) {
+                    None => { eprintln!("No char found!"); }
+                    Some(character) => {
+                        let display = if character == c {
+                            format!("{}", c).truecolor(0, 170, 120).bold()
+                        } else if self.word.chars().any(|wc| wc == c) {
+                            format!("{}", c).bright_yellow().bold()
+                        } else {
+                            self.guessed_letters.insert(c);
+                            format!("{}", c).bold().truecolor(210, 0, 0)
+                        };
+                        print!("{}", display);
+                    }
+                }
             });
             println!();
         })
@@ -88,7 +93,7 @@ impl WordleGame {
     pub fn ask_for_guess(&mut self, locale: &str) -> String {
         let mut args = FluentArgs::new();
         args.set("word_length", FluentValue::from(WORD_LENGTH));
-        println!("{}", format!("{}", get_message_args(&get_bundle(&locale), "enter-word-message", &args)).cyan());
+        println!("\n{}", format!("{}", get_message_args(&get_bundle(&locale), "enter-word-message", &args)).cyan());
         self.display_invalid_letters(locale);
         let mut guess = String::new();
         let mut valid_guess = false;
@@ -203,15 +208,19 @@ fn get_bundle(locale: &str) -> FluentBundle<FluentResource> {
 
     // Load the localization resource
     for path in L10N_RESOURCES {
-        let file = TRANSLATIONS_DIR.get_file(format!("{}/{}", current_locale, path)).unwrap().contents();
-        let source = match std::str::from_utf8(file) {
-            Ok(v) => v,
-            Err(e) => panic!("Invalid UTF-8 sequence: {}", e),
-        };
-        let resource = FluentResource::try_new(source.to_string()).expect("Could not parse an FTL string.");
-        bundle
-            .add_resource(resource)
-            .expect("Failed to add FTL resources to the bundle.");
+        match TRANSLATIONS_DIR.get_file(format!("{}/{}", current_locale, path)) {
+            None => { eprintln!("No file found!") }
+            Some(file) => {
+                let source = match std::str::from_utf8(file.contents()) {
+                    Ok(v) => v,
+                    Err(e) => panic!("Invalid UTF-8 sequence: {}", e),
+                };
+                let resource = FluentResource::try_new(source.to_string()).expect("Could not parse an FTL string.");
+                bundle
+                    .add_resource(resource)
+                    .expect("Failed to add FTL resources to the bundle.");
+            }
+        }
     }
 
     bundle
